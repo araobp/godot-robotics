@@ -1,0 +1,37 @@
+# Blender
+*.blend[1-9]
+*.blendarcher
+*.blendbackup
+*.blendsession
+*.autosave.blend
+*.crash.blend
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporary files
+*.tmp
+/tmp/
+
+# Renders
+/render/
+/output/
+
+# Exported assets (uncomment if you don't want to track these)
+# *.obj
+# *.mtl
+# *.fbx
+# *.gltf
+# *.glb
+# *.usd
+# *.usdc
+# *.usdz
+
+# fSpy
+*.fspy
+
+# Cache files
+*.bcache
+*.vdb
+*.nv_cache
