@@ -4,7 +4,7 @@
 
 ## Robot
 
-<img src="docs/robot.png" width=400>
+<img src="docs/robot.png" width=300>
 
 ## References
 
