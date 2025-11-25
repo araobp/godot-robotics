@@ -1,4 +1,4 @@
-# Robotics
+# Gemini Robotics Simulation with Unity
 
 (Work in progress)
 
