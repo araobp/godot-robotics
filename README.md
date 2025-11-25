@@ -1,6 +1,10 @@
-# godot-robotics
+# Robotics
 
 (Work in progress)
+
+## Robot
+
+<img src="docs/robot.png" width=300>
 
 ## References
 
