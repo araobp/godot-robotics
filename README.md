@@ -1,4 +1,4 @@
-# Robotics
+# Gemini Robotics Simulation
 
 (Work in progress)
 
