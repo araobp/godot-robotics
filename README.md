@@ -2,9 +2,11 @@
 
 (Work in progress)
 
-## Robot
+## Robot made with Blender
 
 <img src="docs/robot.png" width=300>
+
+The original blend file is in https://github.com/araobp/blender-3d/tree/main/robots
 
 ## References
 
