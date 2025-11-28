@@ -1,4 +1,4 @@
-# Gemini Robotics Simulation with Godot
+# AI Robot Simulation with Godot and Gemini Robotics
 
 (Work in progress)
 
