@@ -12,6 +12,8 @@ The original blend file is in https://github.com/araobp/blender-3d/tree/main/rob
 
 ## Simulation on Unity
 
+(Just started implementing it)
+
 => [Code](./robotics)
 
 => [Gemini.cs](/robotics/Assets/Scripts/Gemini.cs) This is a Gemini-generated C# port of [my original GDScript code for Gemini API](https://github.com/araobp/airport/blob/main/airport/scripts/gemini.gd).
