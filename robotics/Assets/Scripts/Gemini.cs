@@ -12,17 +12,27 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 /// <summary>
-/// This is a C# port of a Godot project available on GitHub: https://github.com/araobp/airport
+/// This class provides a client for interacting with the Google Gemini API,
+/// including chat completion, function calling, and text-to-speech capabilities.
 /// </summary>
 public class Gemini
 {
-    // Configuration Struct
+    /// <summary>
+    /// Configuration properties for the Gemini client.
+    /// </summary>
     public struct GeminiProps
     {
+        /// <summary>
+        /// The specific Gemini model to use (e.g., "gemini-2.5-flash").
+        /// </summary>
         public string GeminiModel;
+        /// <summary>
+        /// The API key for authenticating with the Google Gemini API.
+        /// </summary>
         public string GeminiApiKey;
     }
 
+    // Private fields for API endpoints, history management, and logging.
     private string _apiEndpoint;
     private string _ttsApiEndpoint;
     private bool _enableHistory = false;
@@ -31,7 +41,10 @@ public class Gemini
 
     private string CHAT_HISTORY_LOG_PATH;
 
-    // Default callback
+    /// <summary>
+    /// A default callback function for logging Gemini's text output to the Unity console.
+    /// </summary>
+    /// <param name="text">The text to log.</param>
     private void DefaultOutputText(string text)
     {
         Debug.Log($"DEFAULT OUTPUT: {text}\n\n");
@@ -42,15 +55,17 @@ public class Gemini
     #region Public Methods
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Gemini"/> class.
+    /// Initializes a new instance of the Gemini client.
     /// </summary>
+    /// <param name="props">Configuration properties including the model and API key.</param>
+    /// <param name="enableHistory">Whether to enable conversation history.</param>
     public Gemini(GeminiProps props, bool enableHistory = false)
     {
         if (string.IsNullOrEmpty(props.GeminiModel))
         {
             props.GeminiModel = "gemini-2.5-flash";
         }
-        string api = $"https://generativelanguage.googleapis.com/v1beta/models/{props.GeminiModel}:generateContent";
+        string api = $"https://generativelanguage.googleapis.com/v1beta/models/{props.GeminiModel}:generateContent"; // Base API for content generation
         Debug.Log($"Using Gemini API Endpoint: {api}");
         _apiEndpoint = $"{api}?key={props.GeminiApiKey}";
         _ttsApiEndpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key={props.GeminiApiKey}";
@@ -59,8 +74,16 @@ public class Gemini
     }
 
     /// <summary>
-    /// Main Chat function
+    /// Sends a request to the Gemini API and handles the conversation flow, including function calls.
     /// </summary>
+    /// <param name="query">The user's text prompt.</param>
+    /// <param name="systemInstruction">Instructions for the model on how to behave.</param>
+    /// <param name="base64Images">A list of Base64-encoded images to include in the prompt.</param>
+    /// <param name="jsonSchema">A JSON schema to enforce structured output from the model.</param>
+    /// <param name="functionDeclarations">Declarations of functions the model can call.</param>
+    /// <param name="functionHandlers">A dictionary of objects that contain the methods to handle function calls.</param>
+    /// <param name="callback">A callback action to handle the model's final text response.</param>
+    /// <returns>The final text response from the model after all function calls are resolved.</returns>
     public async Task<string> Chat(
         string query, 
         string systemInstruction, 
@@ -70,8 +93,10 @@ public class Gemini
         Dictionary<string, object> functionHandlers = null,
         Action<string> callback = null)
     {
+        // Use the default logger if no callback is provided.
         callback ??= DefaultOutputText;
 
+        // Construct the conversation history, including the new user prompt.
         var conversation = new List<Content>(_chatHistory)
         {
             CreateUserContent(query, base64Images)
@@ -79,6 +104,7 @@ public class Gemini
 
         string latestResponseText = "";
 
+        // Loop to handle multi-turn function calling.
         while (true)
         {
             var request = BuildRequest(conversation, systemInstruction, jsonSchema, functionDeclarations);
@@ -92,13 +118,16 @@ public class Gemini
             }
 
             var modelResponseContent = response.Candidates[0].Content;
+            // Add the model's response to the conversation history for the next turn.
             conversation.Add(modelResponseContent);
 
+            // Extract any function calls requested by the model.
             var functionCalls = modelResponseContent.Parts
                 .Where(p => p.FunctionCall != null)
                 .Select(p => p.FunctionCall)
                 .ToList();
 
+            // Process and invoke the callback for any text parts in the response.
             foreach (var part in modelResponseContent.Parts.Where(p => !string.IsNullOrEmpty(p.Text)))
             {
                 latestResponseText = part.Text;
@@ -108,6 +137,7 @@ public class Gemini
                 }
             }
 
+            // If there are no more function calls, the conversation turn is over.
             if (!functionCalls.Any())
             {
                 break; // End of conversation turn
@@ -121,6 +151,7 @@ public class Gemini
             }
         }
 
+        // Manage chat history if enabled.
         if (_enableHistory)
         {
             _chatHistory = conversation;
@@ -130,6 +161,7 @@ public class Gemini
             }
         }
 
+        // Log the full conversation to a file for debugging.
         LogHistory(conversation);
 
         return latestResponseText;
@@ -143,6 +175,7 @@ public class Gemini
     /// <returns>A byte array containing the synthesized audio data.</returns>
     public async Task<byte[]> SynthesizeSpeech(string text, string voiceName = "Leda")
     {
+        // Construct the JSON payload for the Text-to-Speech API.
         var payload = new JObject();
         payload["contents"] = new JArray {
                 new JObject {
@@ -160,10 +193,12 @@ public class Gemini
                 }
             };
         //payload["model"] = "gemini-1.5-flash-preview-tts";
-
+        
+        // Send the request to the TTS API endpoint.
         string responseBody = await SendWebRequest(_ttsApiEndpoint, payload.ToString());
         if (string.IsNullOrEmpty(responseBody)) return null;
 
+        // Parse the response and extract the Base64-encoded audio data.
         try
         {
             var jsonResponse = JObject.Parse(responseBody);
@@ -185,6 +220,12 @@ public class Gemini
 
     #region Private Helpers
 
+    /// <summary>
+    /// Creates a user content object for the conversation history.
+    /// </summary>
+    /// <param name="query">The user's text prompt.</param>
+    /// <param name="base64Images">A list of Base64-encoded images.</param>
+    /// <returns>A content object representing the user's turn.</returns>
     private Content CreateUserContent(string query, List<string> base64Images)
     {
         var parts = new List<Part> { new Part { Text = query } };
@@ -198,6 +239,14 @@ public class Gemini
         return new Content { Role = "user", Parts = parts.ToArray() };
     }
 
+    /// <summary>
+    /// Builds the full request object to be sent to the Gemini API.
+    /// </summary>
+    /// <param name="conversation">The current conversation history.</param>
+    /// <param name="systemInstruction">The system-level instructions for the model.</param>
+    //  <param name="jsonSchema">The JSON schema for structured responses.</param>
+    /// <param name="functionDeclarations">The declarations of available functions.</param>
+    /// <returns>A fully constructed GeminiRequest object.</returns>
     private GeminiRequest BuildRequest(List<Content> conversation, string systemInstruction, JObject jsonSchema, JObject functionDeclarations)
     {
         var request = new GeminiRequest
@@ -207,6 +256,7 @@ public class Gemini
             GenerationConfig = new GenerationConfig()
         };
 
+        // Configure for structured JSON output if a schema is provided.
         if (jsonSchema != null)
         {
             request.GenerationConfig.ResponseMimeType = "application/json";
@@ -215,6 +265,7 @@ public class Gemini
 
         if (functionDeclarations != null)
         {
+            // Add tool configurations for function calling.
             request.Tools = new[] { new Tool { FunctionDeclarations = functionDeclarations["functions"] } };
         }
 
@@ -223,12 +274,15 @@ public class Gemini
 
     private async Task<GeminiResponse> SendRequest(GeminiRequest request)
     {
+        // Serialize the request object to JSON with camelCase naming convention.
         var settings = new JsonSerializerSettings { ContractResolver = new CamelCasePropertyNamesContractResolver(), NullValueHandling = NullValueHandling.Ignore };
         string payload = JsonConvert.SerializeObject(request, settings);
 
+        // Send the web request and get the response body.
         string responseBody = await SendWebRequest(_apiEndpoint, payload);
         if (string.IsNullOrEmpty(responseBody)) return null;
 
+        // Deserialize the JSON response into a GeminiResponse object.
         try
         {
             return JsonConvert.DeserializeObject<GeminiResponse>(responseBody);
@@ -240,6 +294,12 @@ public class Gemini
         }
     }
 
+    /// <summary>
+    /// Handles a function call request from the model by executing the corresponding C# method.
+    /// </summary>
+    /// <param name="functionCall">The function call details from the model.</param>
+    /// <param name="functionHandlers">A dictionary of objects containing the handler methods.</param>
+    /// <returns>A content object containing the result of the function execution.</returns>
     private async Task<Content> HandleFunctionCall(FunctionCall functionCall, Dictionary<string, object> functionHandlers)
     {
         string funcName = functionCall.Name;
@@ -247,8 +307,10 @@ public class Gemini
 
         Debug.Log($"Calling: {funcName} with args: {args}\n\n");
 
+        // Execute the function using reflection.
         JObject functionResult = await ExecuteFunction(functionHandlers, funcName, args);
 
+        // Create a function response content object to send back to the model.
         return new Content
         {
             Role = "function",
@@ -266,6 +328,10 @@ public class Gemini
         };
     }
 
+    /// <summary>
+    /// Logs the entire conversation to a text file for debugging purposes.
+    /// </summary>
+    /// <param name="conversation">The list of content objects representing the conversation.</param>
     private void LogHistory(List<Content> conversation)
     {
         try
@@ -281,8 +347,11 @@ public class Gemini
     }
 
     /// <summary>
-    /// Helper to send UnityWebRequest asynchronously
+    /// A generic helper to send a POST web request with a JSON payload.
     /// </summary>
+    /// <param name="url">The URL to send the request to.</param>
+    /// <param name="jsonPayload">The JSON payload as a string.</param>
+    /// <returns>The response body as a string, or null if an error occurred.</returns>
     private async Task<string> SendWebRequest(string url, string jsonPayload)
     {
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
@@ -308,8 +377,12 @@ public class Gemini
     }
 
     /// <summary>
-    ///  Executes a method on a referenced object within functionHandlers using Reflection
+    /// Executes a method on a referenced object within functionHandlers using Reflection.
     /// </summary>
+    /// <param name="functionHandlers">A dictionary of objects containing handler methods.</param>
+    /// <param name="funcName">The name of the function to execute.</param>
+    /// <param name="args">The arguments for the function as a JObject.</param>
+    /// <returns>The result of the function execution as a JObject.</returns>
     private async Task<JObject> ExecuteFunction(Dictionary<string, object> functionHandlers, string funcName, JObject args)
     {
         if (functionHandlers == null || functionHandlers.Count == 0)
@@ -330,6 +403,7 @@ public class Gemini
         try
         {            
             object result = null;
+            // Check if the method returns a Task for async handling.
             bool isAwaitable = method.ReturnType.GetMethod(nameof(Task.GetAwaiter)) != null;
 
             if (method.GetParameters().Length > 0)
@@ -341,6 +415,7 @@ public class Gemini
                 result = method.Invoke(targetObject, null);
             }
 
+            // If the method is awaitable, wait for it to complete.
             if (isAwaitable && result is Task task)
             {
                 await task;
@@ -351,6 +426,7 @@ public class Gemini
                 else { result = null; } // Task with no result
             }
             
+            // Package the result into a JObject.
             return result is JObject jResult ? jResult : new JObject { ["result"] = JToken.FromObject(result) };
         }
         catch (Exception ex)
@@ -363,6 +439,9 @@ public class Gemini
     /// <summary>
     /// Finds a public method with the given name in any of the handler objects.
     /// </summary>
+    /// <param name="functionHandlers">The dictionary of handler objects.</param>
+    /// <param name="funcName">The name of the method to find.</param>
+    /// <returns>A tuple containing the target object and the MethodInfo, or (null, null) if not found.</returns>
     private (object, MethodInfo) FindMethod(Dictionary<string, object> functionHandlers, string funcName)
     {
         foreach (var handler in functionHandlers.Values)
@@ -380,6 +459,9 @@ public class Gemini
 
     #region API Data Structures
 
+    /// <summary>
+    /// Represents the overall request sent to the Gemini API.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class GeminiRequest
     {
@@ -389,25 +471,36 @@ public class Gemini
         public GenerationConfig GenerationConfig { get; set; }
     }
 
+    /// <summary>
+    /// Represents the overall response from the Gemini API.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class GeminiResponse
     {
         public Candidate[] Candidates { get; set; }
     }
 
+    /// <summary>
+    /// Represents the response from the Text-to-Speech API.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class SynthesizeSpeechResponse
     {
         public Candidate[] Candidates { get; set; }
     }
 
+    /// <summary>
+    /// A candidate response generated by the model.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class Candidate
     {
         public Content Content { get; set; }
     }
 
-
+    /// <summary>
+    /// A piece of content in the conversation, associated with a role (user, model, or function).
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class Content
     {
@@ -415,6 +508,9 @@ public class Gemini
         public Part[] Parts { get; set; }
     }
 
+    /// <summary>
+    /// A part of a multi-modal content message. Can be text, image data, a function call, etc.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class Part
     {
@@ -425,6 +521,9 @@ public class Gemini
         public AudioData AudioData { get; set; }
     }
 
+    /// <summary>
+    /// Represents inline data, such as a Base64-encoded image.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class InlineData
     {
@@ -432,6 +531,9 @@ public class Gemini
         public string Data { get; set; }
     }
 
+    /// <summary>
+    /// Represents inline audio data from the TTS API.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class AudioData
     {
@@ -439,6 +541,9 @@ public class Gemini
         public string Data { get; set; }
     }
 
+    /// <summary>
+    /// Represents a function call requested by the model.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class FunctionCall
     {
@@ -446,6 +551,9 @@ public class Gemini
         public object Args { get; set; }
     }
 
+    /// <summary>
+    /// Represents the response from a function execution, to be sent back to the model.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class FunctionResponse
     {
@@ -453,12 +561,18 @@ public class Gemini
         public object Response { get; set; }
     }
 
+    /// <summary>
+    /// A container for function declarations provided to the model.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class Tool
     {
         public JToken FunctionDeclarations { get; set; }
     }
 
+    /// <summary>
+    /// Configuration options for content generation.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class GenerationConfig
     {
@@ -467,6 +581,9 @@ public class Gemini
         public ThinkingConfig ThinkingConfig { get; set; }
     }
 
+    /// <summary>
+    /// Configuration for enabling the model's "thinking" or chain-of-thought process in the response.
+    /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class ThinkingConfig
     {
