@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.XR;
 
 public class RobotTest : MonoBehaviour
 {
@@ -14,6 +15,9 @@ public class RobotTest : MonoBehaviour
     [SerializeField] Button buttonArmR;
     [SerializeField] Button buttonArmL;
 
+    [SerializeField] Button buttonHandR;
+    [SerializeField] Button buttonHandL;
+
     [SerializeField] private float rotationSwingSpeed = 100f;
     [SerializeField] GameObject boneSwing;
 
@@ -23,6 +27,11 @@ public class RobotTest : MonoBehaviour
     [SerializeField] private float rotationArmSpeed = 100f;
     [SerializeField] GameObject boneArm;
 
+    [SerializeField] private float rotationHandSpeed = 100f;
+    [SerializeField] GameObject boneHand;
+
+    [SerializeField] Toggle toggleLookDown;
+
     private bool isSwingButtonRPressed = false;
     private bool isSwingButtonLPressed = false;
 
@@ -31,6 +40,9 @@ public class RobotTest : MonoBehaviour
 
     private bool isArmButtonRPressed = false;
     private bool isArmButtonLPressed = false;
+
+    private bool isHandButtonRPressed = false;
+    private bool isHandButtonLPressed = false;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -43,6 +55,9 @@ public class RobotTest : MonoBehaviour
 
         SetupButtonEvents(buttonArmR, (isPressed) => isArmButtonRPressed = isPressed);
         SetupButtonEvents(buttonArmL, (isPressed) => isArmButtonLPressed = isPressed);
+
+        SetupButtonEvents(buttonHandR, (isPressed) => isHandButtonRPressed = isPressed);
+        SetupButtonEvents(buttonHandL, (isPressed) => isHandButtonLPressed = isPressed);
     }
 
     // Update is called once per frame
@@ -74,6 +89,39 @@ public class RobotTest : MonoBehaviour
         {
             boneArm.transform.Rotate(0f, rotationArmSpeed * Time.deltaTime, 0f);
         }
+
+        if (isHandButtonRPressed)
+        {
+            boneHand.transform.Rotate(0f, rotationHandSpeed * Time.deltaTime, 0f);
+        }
+        else if (isHandButtonLPressed)
+        {
+            boneHand.transform.Rotate(0f, -rotationHandSpeed * Time.deltaTime, 0f);
+        }
+
+        if (toggleLookDown.isOn)
+        {
+            makeHandLookDown();            
+        }
+    }
+
+    void makeHandLookDown()
+    {
+
+        Transform parentTransform = boneHand.transform.parent;
+        // Get the parent's world-space right axis
+        Vector3 parentRight = parentTransform.right;
+
+        // Define the desired forward direction in world space (pointing straight up)
+        Vector3 worldUpward = Vector3.up;
+
+        // Calculate the target world rotation. This rotation orients the boneHand so that its
+        // forward vector points upwards (worldUpward), and its up vector aligns with its
+        // parent's right vector.
+        Quaternion targetWorldRotation = Quaternion.LookRotation(worldUpward, parentRight);
+
+        // Convert the world rotation to local rotation relative to the parent
+        boneHand.transform.localRotation = Quaternion.Inverse(parentTransform.rotation) * targetWorldRotation;
     }
 
     private void SetupButtonEvents(Button button, System.Action<bool> setPressedState)
