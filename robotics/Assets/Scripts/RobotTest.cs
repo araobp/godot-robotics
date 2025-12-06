@@ -162,9 +162,9 @@ public class RobotTest : MonoBehaviour
     {
         // Constants
         const float AB = 0.169f;
-        const float Bs = 0.273f;
+        const float CD = 0.273f;
         const float HANDSIZE = 0.325f;
-        const float GF = HANDSIZE - Bs;
+        const float GF = HANDSIZE - CD;
         const float FE = 0.49727f;
         const float ED = 0.70142f;
 
@@ -175,7 +175,7 @@ public class RobotTest : MonoBehaviour
         float theta1 = Mathf.Atan2(A.z, A.x);
         Debug.Log("Theta1: " + (theta1 * Mathf.Rad2Deg).ToString("F4"));
 
-        float AC = A.x / Mathf.Cos(theta1);
+        float AC = Mathf.Sqrt(A.x * A.x + A.z * A.z);
         float theta3 = Mathf.Asin(AB/AC);
         Debug.Log("Theta3: " + (theta3 * Mathf.Rad2Deg).ToString("F4"));
 
@@ -186,7 +186,7 @@ public class RobotTest : MonoBehaviour
         Debug.Log("Theta2: " + (theta2 * Mathf.Rad2Deg).ToString("F4"));
 
         Vector3 B = new Vector3(BC * Mathf.Cos(theta2), A.y, BC * Mathf.Sin(theta2));
-        Vector3 G = new Vector3(B.x, B.y + Bs, B.z);
+        Vector3 G = new Vector3(B.x, B.y + CD, B.z);
 
         float r = Mathf.Sqrt(BC * BC  + GF * GF);
         Debug.Log("r: " + r.ToString("F4"));
