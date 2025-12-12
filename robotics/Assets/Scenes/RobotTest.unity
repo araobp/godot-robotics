@@ -446,7 +446,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 693024119}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: -0.0491, z: 0}
   m_LocalScale: {x: 1, y: 0.1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -454,7 +454,7 @@ Transform:
   - {fileID: 1068617726}
   - {fileID: 131571070}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &777544276 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4753365431795852038, guid: bc859c7163f924a38bf55be8b163a4a2, type: 3}
@@ -1088,15 +1088,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RobotTest
   work: {fileID: 131571065}
-  rotationSwingSpeed: 100
   swingAxis: {fileID: 965729776}
-  rotationBoomSpeed: 100
   boomAxis: {fileID: 1568709643}
-  rotationArmSpeed: 100
   armAxis: {fileID: 451412519}
-  rotationHandSpeed: 100
   handAxis: {fileID: 777544276}
-  toggleLookDown: {fileID: 0}
   ikRotationSpeed: 2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

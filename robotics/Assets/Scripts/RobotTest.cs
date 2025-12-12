@@ -8,22 +8,16 @@ public class RobotTest : MonoBehaviour
 
     [SerializeField] GameObject work;
 
-    [SerializeField] private float rotationSwingSpeed = 100f;
     [SerializeField] GameObject swingAxis;
 
-    [SerializeField] private float rotationBoomSpeed = 100f;
     [SerializeField] GameObject boomAxis;
 
-    [SerializeField] private float rotationArmSpeed = 100f;
     [SerializeField] GameObject armAxis;
 
-    [SerializeField] private float rotationHandSpeed = 100f;
     [SerializeField] GameObject handAxis;
 
-    [SerializeField] Toggle toggleLookDown;
-
     [Header("IK Settings")]
-    [SerializeField] private float ikRotationSpeed = 5f;
+    [SerializeField] private float ikRotationSpeed = 2f;
 
     Quaternion initialSwingRotation;
     Quaternion initialBoomRotation;
@@ -50,7 +44,9 @@ public class RobotTest : MonoBehaviour
         targetArmRotation = initialArmRotation;
         targetHandRotation = initialHandRotation;
 
-        Invoke("IKTest", 1f);
+        setPose(-Mathf.PI/2, -Mathf.PI/2, Mathf.PI/2, Mathf.PI/2);
+
+        Invoke("IKTest", 5f);
     }
 
 
@@ -124,5 +120,14 @@ public class RobotTest : MonoBehaviour
         targetBoomRotation = initialBoomRotation * Quaternion.AngleAxis(-theat4 * Mathf.Rad2Deg, Vector3.up);
         targetArmRotation = initialArmRotation * Quaternion.AngleAxis(theat7 * Mathf.Rad2Deg, Vector3.up);
         targetHandRotation = initialHandRotation * Quaternion.AngleAxis(theat8 * Mathf.Rad2Deg, Vector3.up);
+        setPose(-theta2, -theat4, theat7, theat8);
+    }
+
+    void setPose(float swingAngle, float boomAngle, float armAngle, float handAngle)
+    {
+        targetSwingRotation = initialSwingRotation * Quaternion.AngleAxis(swingAngle * Mathf.Rad2Deg, Vector3.up);
+        targetBoomRotation = initialBoomRotation * Quaternion.AngleAxis(boomAngle * Mathf.Rad2Deg, Vector3.up);
+        targetArmRotation = initialArmRotation * Quaternion.AngleAxis(armAngle * Mathf.Rad2Deg, Vector3.up);
+        targetHandRotation = initialHandRotation * Quaternion.AngleAxis(handAngle * Mathf.Rad2Deg, Vector3.up);
     }
 }
